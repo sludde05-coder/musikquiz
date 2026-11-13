@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Musikquiz – utskrivbara kort</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #eee; color: #111; }
+  .toolbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+             padding: 12px 16px; background: #111; color: #fff; }
+  .toolbar h1 { font-size: 18px; margin: 0 12px 0 0; }
+  .toolbar button { font: inherit; padding: 8px 14px; border: 0; border-radius: 8px; background: #ffd23f; color: #111; font-weight: 600; cursor: pointer; }
+  .toolbar label { font-size: 14px; display: flex; gap: 6px; align-items: center; }
+  .help { max-width: 190mm; margin: 16px auto; padding: 12px 16px; background: #fff; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+  .help ol { margin: 6px 0 0; padding-left: 20px; }
+
+  .sheet { width: 190mm; margin: 12px auto; background: #fff; display: grid;
+           grid-template-columns: repeat(3, 60mm); grid-auto-rows: 60mm; gap: 3mm 5mm;
+           justify-content: center; padding: 6mm 0; }
+  .sheet-label { width: 190mm; margin: 20px auto 0; font-size: 13px; color: #555; }
+
+  .card { width: 60mm; height: 60mm; border: 0.3mm dashed #999; border-radius: 3mm; overflow: hidden;
+          display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .card.front { background: #111; color: #fff; }
+  .card.front .qr { background: #fff; padding: 2.5mm; border-radius: 2mm; line-height: 0; }
+  .card.front .qr svg { width: 38mm; height: 38mm; display: block; }
+  .card.front .brand { margin-top: 3mm; font-size: 3.2mm; letter-spacing: 0.6mm; text-transform: uppercase; opacity: 0.8; }
+
+  .card.back { padding: 4mm; justify-content: space-between; }
+  .card.back .artist { font-size: 4mm; font-weight: 600; }
+  .card.back .year { font-size: 17mm; font-weight: 800; line-height: 1; }
+  .card.back .title { font-size: 3.6mm; font-style: italic; }
+  .card.empty { border-color: transparent; background: transparent !important; }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar, .help, .sheet-label { display: none; }
+    .sheet { margin: 0; padding: 0; break-after: page; width: auto; }
+    .sheet:last-child { break-after: auto; }
+    .card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body.no-cutlines .card { border-color: transparent; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <h1>🎵 Musikquiz</h1>
+  <button onclick="window.print()">Skriv ut</button>
+  <label><input type="checkbox" id="cutlines" checked> Klipplinjer</label>
+  <span id="count" style="font-size:14px;opacity:.8"></span>
+</div>
+
+<div class="help">
+  <strong>Så skriver du ut:</strong>
+  <ol>
+    <li>Tryck på <em>Skriv ut</em> och välj <strong>dubbelsidig utskrift, vänd längs långa kanten</strong> och skala 100 %.</li>
+    <li>Varannan sida är framsidor (QR-kod) och varannan baksidor (år, artist, titel). Baksidorna är spegelvända så att de hamnar rätt.</li>
+    <li>Klipp ut korten längs de streckade linjerna.</li>
+  </ol>
+  <strong style="display:block;margin-top:8px">Så spelar ni:</strong>
+  Varje spelare börjar med ett kort med året uppåt. Den som har turen skannar en QR-kod, och låten öppnas i Spotify. Lägg telefonen med skärmen nedåt så att ingen ser titeln. Gissa var låten hör hemma på din tidslinje och vänd kortet. Rätt placerat får du behålla kortet. Först till 10 kort vinner.
+</div>
+
+<div id="sheets"></div>
+
+<script src="vendor/qrcode.js"></script>
+<script src="songs.js"></script>
+<script>
+  const PER_PAGE = 12, COLS = 3;
+  const decadeColor = y => {
+    const c = { 1950: "#f6c1c1", 1960: "#ffd8a8", 1970: "#ffe66d", 1980: "#b8f2a6", 1990: "#9be7e3",
+                2000: "#a8c8ff", 2010: "#d0b3ff", 2020: "#ffb3e1" };
+    return c[Math.floor(y / 10) * 10] || "#e0e0e0";
+  };
+  const linkFor = s => s.spotifyId
+    ? "https://open.spotify.com/track/" + s.spotifyId
+    : "https://open.spotify.com/search/" + encodeURIComponent(s.artist + " " + s.title);
+  const qrSvg = url => { const q = qrcode(0, "M"); q.addData(url); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); };
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // Blanda ordningen så att korten inte ligger i årsordning.
+  const songs = [...window.SONGS];
+  for (let i = songs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [songs[i], songs[j]] = [songs[j], songs[i]]; }
+
+  const root = document.getElementById("sheets");
+  document.getElementById("count").textContent = songs.length + " kort";
+  for (let p = 0; p * PER_PAGE < songs.length; p++) {
+    const page = songs.slice(p * PER_PAGE, (p + 1) * PER_PAGE);
+    while (page.length < PER_PAGE) page.push(null);
+
+    let front = "", back = "";
+    page.forEach(s => {
+      front += s ? `<div class="card front"><div class="qr">${qrSvg(linkFor(s))}</div><div class="brand">Musikquiz</div></div>`
+                 : `<div class="card empty"></div>`;
+    });
+    // Baksidan: spegla varje rad så att korten matchar vid vändning längs långa kanten.
+    for (let r = 0; r < PER_PAGE / COLS; r++) {
+      page.slice(r * COLS, r * COLS + COLS).reverse().forEach(s => {
+        back += s ? `<div class="card back" style="background:${decadeColor(s.year)}">
+                      <div class="artist">${esc(s.artist)}</div><div class="year">${s.year}</div><div class="title">${esc(s.title)}</div></div>`
+                  : `<div class="card empty"></div>`;
+      });
+    }
+    root.insertAdjacentHTML("beforeend",
+      `<div class="sheet-label">Ark ${p + 1} – framsida</div><div class="sheet">${front}</div>` +
+      `<div class="sheet-label">Ark ${p + 1} – baksida</div><div class="sheet">${back}</div>`);
+  }
+  document.getElementById("cutlines").addEventListener("change", e => document.body.classList.toggle("no-cutlines", !e.target.checked));
+</script>
+</body>
+</html>

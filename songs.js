@@ -1,0 +1,33 @@
+// Låtlistan för korten.
+// Fält: title, artist, year, och valfritt spotifyId (ID:t från en Spotify-låtlänk,
+// t.ex. https://open.spotify.com/track/<ID>). Saknas spotifyId länkar QR-koden
+// till en Spotify-sökning på artist + titel.
+window.SONGS = [
+  { title: "Hey Jude", artist: "The Beatles", year: 1968 },
+  { title: "Bohemian Rhapsody", artist: "Queen", year: 1975 },
+  { title: "Dancing Queen", artist: "ABBA", year: 1976 },
+  { title: "Take On Me", artist: "a-ha", year: 1985 },
+  { title: "The Final Countdown", artist: "Europe", year: 1986 },
+  { title: "I Wanna Dance with Somebody", artist: "Whitney Houston", year: 1987 },
+  { title: "The Look", artist: "Roxette", year: 1988 },
+  { title: "Smells Like Teen Spirit", artist: "Nirvana", year: 1991 },
+  { title: "Wonderwall", artist: "Oasis", year: 1995 },
+  { title: "...Baby One More Time", artist: "Britney Spears", year: 1998 },
+  { title: "Känn ingen sorg för mig Göteborg", artist: "Håkan Hellström", year: 2000 },
+  { title: "Musik non stop", artist: "Kent", year: 2002 },
+  { title: "Lose Yourself", artist: "Eminem", year: 2002 },
+  { title: "Crazy in Love", artist: "Beyoncé", year: 2003 },
+  { title: "Dancing On My Own", artist: "Robyn", year: 2010 },
+  { title: "Rolling in the Deep", artist: "Adele", year: 2010 },
+  { title: "Jag kommer", artist: "Veronica Maggio", year: 2011 },
+  { title: "Euphoria", artist: "Loreen", year: 2012 },
+  { title: "Don't You Worry Child", artist: "Swedish House Mafia", year: 2012 },
+  { title: "Some Die Young", artist: "Laleh", year: 2012 },
+  { title: "Wake Me Up", artist: "Avicii", year: 2013 },
+  { title: "Get Lucky", artist: "Daft Punk", year: 2013 },
+  { title: "Lush Life", artist: "Zara Larsson", year: 2015 },
+  { title: "Shape of You", artist: "Ed Sheeran", year: 2017 },
+  { title: "bad guy", artist: "Billie Eilish", year: 2019 },
+  { title: "Blinding Lights", artist: "The Weeknd", year: 2019 },
+  { title: "Levitating", artist: "Dua Lipa", year: 2020 },
+];
