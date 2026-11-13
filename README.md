@@ -13,7 +13,7 @@ Spelet finns på <https://sludde05-coder.github.io/musikquiz/>.
 | `kort.html` | Utskrivbara kort: QR-kod på framsidan, år, artist och titel på baksidan |
 | `regler.html` | Regler och brickor att skriva ut |
 | `songs.js` | Låtlistan |
-| `player.js` | Letar upp ett 30-sekunders smakprov för låten |
+| `player.js` | Bygger Spotify-länkarna för smakprov och hel låt |
 | `config.js` | Adressen som QR-koderna pekar på |
 
 ## Skriva ut
@@ -26,7 +26,7 @@ Spelet finns på <https://sludde05-coder.github.io/musikquiz/>.
 
 Låtarna ligger i `songs.js`. Varje låt har ett fast nummer (`id`) som står i QR-koden, så lägg nya låtar sist med nya nummer och ändra inte numret på en låt som redan är utskriven.
 
-`sp` är Spotify-låtens ID och `pv` är Spotifys smakprov. Båda är valfria. Saknas de söker spelsidan själv upp ett smakprov hos Apple Music eller Deezer när kortet skannas.
+Alla låtar spelas via Spotify. `sp` är Spotify-låtens ID (det som står efter `/track/` i en låtlänk) och `pv` är Spotifys 30-sekunders smakprov, som spelas utan att titeln syns. Varje kort har också en knapp som öppnar hela låten i Spotify.
 
 ## Flytta spelet
 

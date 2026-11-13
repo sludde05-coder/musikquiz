@@ -35,7 +35,8 @@
   #answer .year { font-size: 64px; font-weight: 800; line-height: 1; color: var(--gold); }
   #answer .artist { font-size: 20px; font-weight: 700; margin-top: 8px; }
   #answer .title { font-size: 17px; font-style: italic; color: var(--dim); margin-top: 2px; }
-  #answer a { display: inline-block; margin-top: 12px; font-size: 14px; }
+  .btn.spotify { font-size: 16px; background: transparent; border: 2px solid #1ed76066; }
+  .btn.spotify small { display: block; font-weight: 400; font-size: 12.5px; color: var(--dim); margin-top: 2px; }
   form { display: flex; gap: 10px; width: 100%; }
   input { font: inherit; font-size: 18px; flex: 1; min-width: 0; padding: 14px; border-radius: 14px; border: 2px solid #ffffff2e; background: transparent; color: var(--ink); }
   form button { width: auto; }
@@ -70,9 +71,8 @@
       <div class="year" id="ansYear"></div>
       <div class="artist" id="ansArtist"></div>
       <div class="title" id="ansTitle"></div>
-      <a id="ansLink" target="_blank" rel="noopener">Öppna hela låten i Spotify ↗</a>
     </div>
-    <a class="btn" id="spotifyFallback" hidden target="_blank" rel="noopener">Öppna i Spotify i stället ↗</a>
+    <a class="btn spotify" id="spotifyOpen" target="_blank" rel="noopener">Spela hela låten i Spotify ↗<small>Spotify visar titeln, så låt DJ:n hålla i mobilen</small></a>
     <button id="next" hidden>🎲 Nästa låt</button>
     <p class="hint" id="nextHint" hidden>Skanna nästa kort med kameran när ni är klara.</p>
   </div>
@@ -115,7 +115,7 @@
     song = s; randomMode = isRandom; ready = false; revealArmed = false;
     audio.pause(); audio.removeAttribute("src");
     $("start").hidden = true; show("game", true); show("bar", false); show("controls", false); show("answer", false);
-    show("spotifyFallback", false); show("next", false); show("nextHint", false); show("play", true); show("reveal", true);
+    $("spotifyOpen").href = P.spotifyLink(song); show("next", false); show("nextHint", false); show("play", true); show("reveal", true);
     $("play").disabled = false; $("play").textContent = "▶ Spela låten"; $("reveal").textContent = "Visa svaret";
     $("cardno").textContent = isRandom ? "Slumpad låt" : "Kort " + s.id;
     $("fill").style.width = "0"; $("disc").classList.remove("spin");
@@ -133,17 +133,13 @@
   }
 
   async function startPlayback() {
-    $("play").disabled = true; status("Letar upp låten …");
-    // Lås upp ljudet direkt i knapptrycket (krävs på iPhone), innan vi hunnit hitta låten.
+    $("play").disabled = true; status("Hämtar låten från Spotify …");
+    // Lås upp ljudet direkt i knapptrycket (krävs på iPhone).
     try { audio.src = silentUrl(); const p = audio.play(); if (p) p.catch(() => {}); } catch (e) {}
-    for (const find of P.previewSources(song)) {
-      let url = null;
-      try { url = await find(); } catch (e) {}
-      if (url && await canPlay(url)) { ready = true; break; }
-    }
+    const url = P.previewUrl(song);
+    ready = !!url && await canPlay(url);
     if (!ready) {
-      status("Hittade inget smakprov för den här låten.");
-      const a = $("spotifyFallback"); a.href = P.spotifyLink(song); show("spotifyFallback", true);
+      status("Smakprovet gick inte att spela just nu.");
       $("play").disabled = false; $("play").textContent = "Försök igen";
       return;
     }
@@ -159,8 +155,7 @@
       return;
     }
     $("ansYear").textContent = song.year; $("ansArtist").textContent = song.artist; $("ansTitle").textContent = song.title;
-    $("ansLink").href = P.spotifyLink(song);
-    show("answer", true); show("reveal", false); show("spotifyFallback", false);
+    show("answer", true); show("reveal", false);
     show("next", randomMode); show("nextHint", !randomMode);
   }
 
