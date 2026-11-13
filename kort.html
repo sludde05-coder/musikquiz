@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Musikquiz – skriv ut korten</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #e9e7f0; color: #15131f; }
+  .toolbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 12px 16px; background: #15131f; color: #fff; }
+  .toolbar a { color: #fff; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; margin-right: 6px; }
+  .toolbar button { font: inherit; padding: 9px 16px; border: 0; border-radius: 10px; background: #ffd23f; color: #15131f; font-weight: 700; cursor: pointer; }
+  .toolbar label, .toolbar span { font-size: 14px; }
+  .help { max-width: 190mm; margin: 16px auto; padding: 14px 18px; background: #fff; border-radius: 10px; font-size: 15px; line-height: 1.5; }
+  .help ol { margin: 6px 0 0; padding-left: 22px; }
+  .scroll { overflow-x: auto; padding: 0 8px; }
+  .sheet-label { width: 190mm; margin: 22px auto 6px; font-size: 13px; color: #5d5875; }
+  .sheet { width: 190mm; height: 264mm; margin: 0 auto; background: #fff; display: grid; grid-template-columns: repeat(3, 60mm); grid-template-rows: repeat(4, 60mm);
+           gap: 4mm 5mm; justify-content: center; align-content: center; }
+  .card { width: 60mm; height: 60mm; border: 0.3mm dashed #9a96ab; border-radius: 3mm; overflow: hidden; position: relative;
+          display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card .no { position: absolute; right: 2.5mm; bottom: 1.8mm; font-size: 2.6mm; opacity: .6; }
+  .card.front { background: #15131f; color: #fff; }
+  .card.front .qr { background: #fff; padding: 2.5mm; border-radius: 2mm; line-height: 0; }
+  .card.front .qr svg { width: 36mm; height: 36mm; display: block; }
+  .card.front .brand { margin-top: 3mm; font-size: 3.2mm; font-weight: 700; letter-spacing: .9mm; text-transform: uppercase; color: #ffd23f; }
+  .card.back { padding: 5mm 4mm; justify-content: space-between; }
+  .card.back .artist { font-size: 4mm; font-weight: 700; line-height: 1.15; }
+  .card.back .year { font-size: 17mm; font-weight: 800; line-height: 1; letter-spacing: -.5mm; }
+  .card.back .title { font-size: 3.6mm; font-style: italic; line-height: 1.15; padding-bottom: 2mm; }
+  .card.empty { border-color: transparent; background: none; }
+  @media print {
+    body { background: #fff; }
+    .toolbar, .help, .sheet-label { display: none; }
+    .scroll { overflow: visible; padding: 0; }
+    .sheet { margin: 0 auto; break-after: page; break-inside: avoid; }
+    .scroll > .sheet:last-child { break-after: auto; }
+    body.no-cutlines .card { border-color: transparent; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <a href="./">Musikquiz</a>
+  <button onclick="window.print()">Skriv ut korten</button>
+  <label><input type="checkbox" id="cutlines" checked> Klipplinjer</label>
+  <span id="count"></span>
+</div>
+
+<div class="help">
+  <strong>Så skriver du ut</strong>
+  <ol>
+    <li>Tryck på <em>Skriv ut korten</em>. Välj A4, skala 100 % och <strong>dubbelsidigt, vänd längs långa kanten</strong>.</li>
+    <li>Varannan sida är framsidor med QR-kod och varannan är baksidor med år, artist och titel. Baksidorna är spegelvända så att de hamnar bakom rätt kort.</li>
+    <li>Skriv gärna ut på tjockare papper (160–200 g) och klipp längs de streckade linjerna.</li>
+  </ol>
+  Skriv först ut bara sidan 1–2 och kontrollera att fram- och baksida har samma kortnummer i hörnet.
+</div>
+
+<div class="scroll" id="sheets"></div>
+
+<script src="vendor/qrcode.js"></script>
+<script src="config.js"></script>
+<script src="songs.js"></script>
+<script>
+  const PER_PAGE = 12, COLS = 3;
+  const DECADE = { 1950: "#f6c1c1", 1960: "#ffd8a8", 1970: "#ffe66d", 1980: "#b8f2a6", 1990: "#9be7e3", 2000: "#a8c8ff", 2010: "#d0b3ff", 2020: "#ffb3e1" };
+  const colorFor = y => DECADE[Math.floor(y / 10) * 10] || "#e0e0e0";
+  const urlFor = s => window.MQ.SITE_URL + "spela.html?k=" + s.id;
+  const qrSvg = url => { const q = qrcode(0, "M"); q.addData(url); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); };
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // Blanda korten så att arken inte ligger i årsordning. Samma ordning varje gång,
+  // så att ett enstaka ark kan skrivas ut på nytt.
+  const songs = [...window.SONGS];
+  let seed = 20261113;
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  for (let i = songs.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [songs[i], songs[j]] = [songs[j], songs[i]]; }
+
+  const root = document.getElementById("sheets");
+  document.getElementById("count").textContent = songs.length + " kort · " + Math.ceil(songs.length / PER_PAGE) + " ark";
+  for (let p = 0; p * PER_PAGE < songs.length; p++) {
+    const page = songs.slice(p * PER_PAGE, (p + 1) * PER_PAGE);
+    while (page.length < PER_PAGE) page.push(null);
+    let front = "", back = "";
+    page.forEach(s => {
+      front += s ? `<div class="card front"><div class="qr">${qrSvg(urlFor(s))}</div><div class="brand">Musikquiz</div><div class="no">${s.id}</div></div>`
+                 : `<div class="card empty"></div>`;
+    });
+    // Baksidan: varje rad spegelvänds så att korten matchar när arket vänds längs långa kanten.
+    for (let r = 0; r < PER_PAGE / COLS; r++) {
+      page.slice(r * COLS, r * COLS + COLS).reverse().forEach(s => {
+        back += s ? `<div class="card back" style="background:${colorFor(s.year)}"><div class="artist">${esc(s.artist)}</div><div class="year">${s.year}</div><div class="title">${esc(s.title)}</div><div class="no">${s.id}</div></div>`
+                  : `<div class="card empty"></div>`;
+      });
+    }
+    root.insertAdjacentHTML("beforeend",
+      `<div class="sheet-label">Ark ${p + 1} – framsida</div><div class="sheet">${front}</div>` +
+      `<div class="sheet-label">Ark ${p + 1} – baksida</div><div class="sheet">${back}</div>`);
+  }
+  document.getElementById("cutlines").addEventListener("change", e => document.body.classList.toggle("no-cutlines", !e.target.checked));
+</script>
+</body>
+</html>

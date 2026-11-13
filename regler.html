@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Musikquiz – regler och brickor</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #e9e7f0; color: #15131f; line-height: 1.45; }
+  .toolbar { position: sticky; top: 0; z-index: 2; display: flex; gap: 14px; align-items: center; padding: 12px 16px; background: #15131f; color: #fff; }
+  .toolbar a { color: #fff; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; }
+  .toolbar button { font: inherit; padding: 9px 16px; border: 0; border-radius: 10px; background: #ffd23f; color: #15131f; font-weight: 700; cursor: pointer; }
+  .page { max-width: 186mm; margin: 16px auto; background: #fff; border-radius: 10px; padding: 22px 24px; }
+  h1 { font-size: 28px; margin: 0 0 2px; letter-spacing: -.01em; }
+  .lead { margin: 0 0 14px; color: #5d5875; }
+  h2 { font-size: 16px; margin: 16px 0 4px; text-transform: uppercase; letter-spacing: .08em; }
+  h2 span { background: #ffd23f; padding: 1px 8px; border-radius: 6px; }
+  p, ol, ul { margin: 4px 0 8px; font-size: 14.5px; }
+  ol, ul { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #dcd9e6; vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #5d5875; }
+  .tokens { display: grid; grid-template-columns: repeat(5, 30mm); gap: 6mm; justify-content: center; margin-top: 10mm; }
+  .token { width: 30mm; height: 30mm; border-radius: 50%; border: 0.3mm dashed #9a96ab; display: flex; align-items: center; justify-content: center;
+           background: radial-gradient(circle, #15131f 0 17%, #ffd23f 18% 46%, #15131f 47% 100%); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .page { margin: 0; padding: 0; border-radius: 0; max-width: none; break-after: page; }
+    body { line-height: 1.35; }
+    h1 { font-size: 24px; }
+    .lead { margin-bottom: 8px; }
+    h2 { font-size: 13px; margin: 10px 0 3px; }
+    p, ol, ul { font-size: 12.5px; margin: 3px 0 5px; }
+    li { margin-bottom: 1px; }
+    table { font-size: 12.5px; margin-top: 3px; }
+    th, td { padding: 4px 8px; }
+    .page:last-child { break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar"><a href="./">Musikquiz</a><button onclick="window.print()">Skriv ut regler och brickor</button></div>
+
+<section class="page">
+  <h1>Musikquiz</h1>
+  <p class="lead">Lyssna, gissa årtalet och bygg din tidslinje. 2–10 spelare eller lag, cirka 30 minuter.</p>
+
+  <h2><span>Det här behövs</span></h2>
+  <p>Musikkorten, 2 brickor per spelare (plus en hög i reserv) och en mobil med internet. Mynt går lika bra som brickor.</p>
+
+  <h2><span>Förberedelser</span></h2>
+  <ol>
+    <li>Blanda korten och lägg högen mitt på bordet med QR-koden uppåt.</li>
+    <li>Varje spelare eller lag tar ett kort och lägger det framför sig med årtalet uppåt. Det är början på din tidslinje.</li>
+    <li>Varje spelare eller lag tar 2 brickor.</li>
+  </ol>
+
+  <h2><span>Så går en tur till</span></h2>
+  <ol>
+    <li><strong>Spela.</strong> Spelaren till höger om dig är DJ. DJ:n skannar översta kortets QR-kod med mobilens kamera och trycker på <em>Spela låten</em>. Ingen får titta på kortets baksida.</li>
+    <li><strong>Placera.</strong> Lägg kortet med QR-koden uppåt där du tror att låten hör hemma i din tidslinje: före, efter eller mellan dina kort.</li>
+    <li><strong>Vänd.</strong> Vänd kortet. Ligger årtalet rätt i ordningen får du behålla kortet. Annars läggs det i slänghögen. Samma årtal som kortet bredvid räknas som rätt.</li>
+  </ol>
+  <p>Sedan går turen vidare åt vänster. <strong>Den som först har 10 kort i sin tidslinje vinner.</strong></p>
+
+  <h2><span>Brickorna</span></h2>
+  <ul>
+    <li><strong>Tjäna en bricka:</strong> säg både artist och titel rätt innan kortet vänds. Du kan ha högst 5 brickor.</li>
+    <li><strong>Byt låt (1 bricka):</strong> kan du inte låten? Betala en bricka och dra ett nytt kort.</li>
+    <li><strong>Utmana (1 bricka):</strong> tror du att en motspelare har lagt fel? Säg ”Utmaning!” innan kortet vänds och lägg en bricka där du tror att kortet hör hemma i deras tidslinje. Hade de fel och du rätt får du kortet till din egen tidslinje. Brickan är förbrukad oavsett. Två brickor får inte ligga på samma plats.</li>
+    <li><strong>Köp ett kort (3 brickor):</strong> dra ett kort, titta på årtalet och lägg det direkt på rätt plats.</li>
+  </ul>
+
+  <h2><span>Svårighetsnivåer</span></h2>
+  <p>Spelarna kan välja olika nivåer i samma omgång, så blir det jämnare.</p>
+  <table>
+    <tr><th>Nivå</th><th>För att få behålla kortet</th><th>Brickor</th></tr>
+    <tr><td><strong>Lätt</strong></td><td>Rätt plats i tidslinjen.</td><td>Börja med 2, tjäna fler.</td></tr>
+    <tr><td><strong>Proffs</strong></td><td>Rätt plats, och du måste kunna artist och titel.</td><td>Börja med 5, inga nya.</td></tr>
+    <tr><td><strong>Expert</strong></td><td>Rätt plats, artist, titel och exakt årtal.</td><td>Börja med 3, inga nya.</td></tr>
+    <tr><td><strong>Samarbete</strong></td><td>Alla bygger en gemensam tidslinje. Varje miss kostar en bricka. Nå 10 kort innan brickorna tar slut.</td><td>Börja med 5 tillsammans.</td></tr>
+  </table>
+
+  <h2><span>Utan kort</span></h2>
+  <p>Öppna spelsidan och tryck på <em>Slumpa en låt</em>. Skriv upp era tidslinjer på papper, eller låt en person vara spelledare.</p>
+</section>
+
+<section class="page">
+  <h1>Brickor</h1>
+  <p class="lead">Klipp ut. 30 stycken räcker till 10 spelare.</p>
+  <div class="tokens" id="tokens"></div>
+</section>
+
+<script>
+  document.getElementById("tokens").innerHTML = Array.from({ length: 30 }, () => '<div class="token"></div>').join("");
+</script>
+</body>
+</html>
