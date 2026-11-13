@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15131f">
+<title>Musikquiz</title>
+<style>
+  :root { --bg: #15131f; --card: #221f33; --ink: #f4f1ff; --dim: #a7a1c2; --gold: #ffd23f; --pink: #ff5d8f; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         display: flex; flex-direction: column; align-items: center; padding: 20px 20px calc(28px + env(safe-area-inset-bottom)); }
+  a { color: var(--gold); }
+  header { width: 100%; max-width: 420px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--dim); }
+  header a { text-decoration: none; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
+  main { width: 100%; max-width: 420px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
+  .disc { width: 210px; height: 210px; border-radius: 50%; position: relative; flex: none;
+          background: repeating-radial-gradient(circle, #0c0b12 0 3px, #1b1929 3px 6px); box-shadow: 0 12px 40px #0008; }
+  .disc::before { content: ""; position: absolute; inset: 34%; border-radius: 50%; background: conic-gradient(var(--gold), var(--pink), var(--gold)); }
+  .disc::after { content: ""; position: absolute; inset: 47%; border-radius: 50%; background: var(--bg); }
+  .disc.spin { animation: spin 2.4s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .disc.spin { animation-duration: 12s; } }
+  #status { min-height: 1.4em; margin: 0; color: var(--dim); font-size: 16px; }
+  .bar { width: 100%; height: 6px; border-radius: 3px; background: #ffffff1a; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--gold); }
+  button, .btn { font: inherit; border: 0; border-radius: 14px; padding: 16px 20px; font-size: 18px; font-weight: 700; cursor: pointer; width: 100%;
+                 background: var(--card); color: var(--ink); text-decoration: none; display: block; }
+  button.primary { background: var(--gold); color: #15131f; }
+  button.ghost { background: transparent; border: 2px solid #ffffff2e; }
+  button:disabled { opacity: .5; }
+  .row { display: flex; gap: 10px; width: 100%; }
+  #answer { width: 100%; background: var(--card); border-radius: 18px; padding: 18px; }
+  #answer .year { font-size: 64px; font-weight: 800; line-height: 1; color: var(--gold); }
+  #answer .artist { font-size: 20px; font-weight: 700; margin-top: 8px; }
+  #answer .title { font-size: 17px; font-style: italic; color: var(--dim); margin-top: 2px; }
+  .btn.spotify { font-size: 16px; background: transparent; border: 2px solid #1ed76066; }
+  .btn.spotify small { display: block; font-weight: 400; font-size: 12.5px; color: var(--dim); margin-top: 2px; }
+  form { display: flex; gap: 10px; width: 100%; }
+  input { font: inherit; font-size: 18px; flex: 1; min-width: 0; padding: 14px; border-radius: 14px; border: 2px solid #ffffff2e; background: transparent; color: var(--ink); }
+  form button { width: auto; }
+  .hint { font-size: 14px; color: var(--dim); margin: 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header><a href="./">Musikquiz</a><span id="cardno"></span></header>
+
+<main>
+  <div class="disc" id="disc"></div>
+  <p id="status"></p>
+  <div class="bar" id="bar" hidden><i id="fill"></i></div>
+
+  <!-- Startläge: inget kort valt -->
+  <div id="start" hidden style="width:100%;display:flex;flex-direction:column;gap:14px">
+    <p class="hint">Skanna QR-koden på ett kort med mobilens kamera, eller välj här:</p>
+    <button class="primary" id="random">🎲 Slumpa en låt</button>
+    <form id="numform"><input id="num" inputmode="numeric" pattern="[0-9]*" placeholder="Kortnummer" aria-label="Kortnummer"><button>Öppna</button></form>
+  </div>
+
+  <!-- Spelläge -->
+  <div id="game" hidden style="width:100%;display:flex;flex-direction:column;gap:12px">
+    <button class="primary" id="play">▶ Spela låten</button>
+    <div class="row" id="controls" hidden>
+      <button id="pause">⏸ Paus</button>
+      <button id="again">↻ Från början</button>
+    </div>
+    <button class="ghost" id="reveal">Visa svaret</button>
+    <div id="answer" hidden>
+      <div class="year" id="ansYear"></div>
+      <div class="artist" id="ansArtist"></div>
+      <div class="title" id="ansTitle"></div>
+    </div>
+    <a class="btn spotify" id="spotifyOpen" target="_blank" rel="noopener">Spela hela låten i Spotify ↗<small>Spotify visar titeln, så låt DJ:n hålla i mobilen</small></a>
+    <button id="next" hidden>🎲 Nästa låt</button>
+    <p class="hint" id="nextHint" hidden>Skanna nästa kort med kameran när ni är klara.</p>
+  </div>
+</main>
+
+<audio id="audio" preload="auto" playsinline></audio>
+
+<script src="songs.js"></script>
+<script src="player.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const audio = $("audio"), songs = window.SONGS, P = window.MQPlayer;
+  let song = null, randomMode = false, ready = false, revealArmed = false, silent = null;
+
+  const store = { get() { try { return JSON.parse(sessionStorage.getItem("mq-played") || "[]"); } catch (e) { return []; } },
+                  set(v) { try { sessionStorage.setItem("mq-played", JSON.stringify(v)); } catch (e) {} } };
+
+  function show(id, on) { $(id).hidden = !on; }
+  function status(t) { $("status").textContent = t; }
+
+  function silentUrl() {
+    if (silent) return silent;
+    const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) b[o + i] = s.charCodeAt(i); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, "data"); v.setUint32(40, n, true);
+    b.fill(128, 44);
+    return (silent = URL.createObjectURL(new Blob([b], { type: "audio/wav" })));
+  }
+
+  function startScreen() {
+    song = null; ready = false; audio.pause();
+    $("cardno").textContent = ""; $("disc").classList.remove("spin");
+    show("game", false); show("bar", false); $("start").hidden = false;
+    status("Välkommen! Dags att gissa årtal.");
+  }
+
+  function load(s, isRandom) {
+    song = s; randomMode = isRandom; ready = false; revealArmed = false;
+    audio.pause(); audio.removeAttribute("src");
+    $("start").hidden = true; show("game", true); show("bar", false); show("controls", false); show("answer", false);
+    $("spotifyOpen").href = P.spotifyLink(song); show("next", false); show("nextHint", false); show("play", true); show("reveal", true);
+    $("play").disabled = false; $("play").textContent = "▶ Spela låten"; $("reveal").textContent = "Visa svaret";
+    $("cardno").textContent = isRandom ? "Slumpad låt" : "Kort " + s.id;
+    $("fill").style.width = "0"; $("disc").classList.remove("spin");
+    status("Lägg mobilen så att alla hör. Redo?");
+  }
+
+  // Väntar tills ljudet går att spela, eller ger upp.
+  function canPlay(url) {
+    return new Promise(resolve => {
+      const done = ok => { clearTimeout(t); audio.removeEventListener("canplay", yes); audio.removeEventListener("error", no); resolve(ok); };
+      const yes = () => done(true), no = () => done(false), t = setTimeout(no, 9000);
+      audio.addEventListener("canplay", yes); audio.addEventListener("error", no);
+      audio.src = url; audio.load();
+    });
+  }
+
+  async function startPlayback() {
+    $("play").disabled = true; status("Hämtar låten från Spotify …");
+    // Lås upp ljudet direkt i knapptrycket (krävs på iPhone).
+    try { audio.src = silentUrl(); const p = audio.play(); if (p) p.catch(() => {}); } catch (e) {}
+    const url = P.previewUrl(song);
+    ready = !!url && await canPlay(url);
+    if (!ready) {
+      status("Smakprovet gick inte att spela just nu.");
+      $("play").disabled = false; $("play").textContent = "Försök igen";
+      return;
+    }
+    show("play", false); show("controls", true); show("bar", true);
+    try { await audio.play(); }
+    catch (e) { status("Tryck på Från början för att starta."); }
+  }
+
+  function reveal() {
+    if (!revealArmed) {
+      revealArmed = true; $("reveal").textContent = "Säker? Tryck igen för att visa";
+      setTimeout(() => { if (revealArmed && $("answer").hidden) { revealArmed = false; $("reveal").textContent = "Visa svaret"; } }, 3500);
+      return;
+    }
+    $("ansYear").textContent = song.year; $("ansArtist").textContent = song.artist; $("ansTitle").textContent = song.title;
+    show("answer", true); show("reveal", false);
+    show("next", randomMode); show("nextHint", !randomMode);
+  }
+
+  function randomSong() {
+    let played = store.get();
+    let left = songs.filter(s => !played.includes(s.id));
+    if (!left.length) { played = []; left = songs.slice(); }
+    const s = left[Math.floor(Math.random() * left.length)];
+    played.push(s.id); store.set(played);
+    load(s, true);
+  }
+
+  audio.addEventListener("playing", () => { if (ready) { $("disc").classList.add("spin"); status("Lyssna … vilket år?"); $("pause").textContent = "⏸ Paus"; } });
+  audio.addEventListener("pause", () => { $("disc").classList.remove("spin"); if (ready && !audio.ended) $("pause").textContent = "▶ Fortsätt"; });
+  audio.addEventListener("ended", () => { if (ready) { status("Slut på smakprovet. Lyssna igen eller visa svaret."); $("pause").textContent = "▶ Spela"; } });
+  audio.addEventListener("timeupdate", () => { if (ready && audio.duration) $("fill").style.width = (100 * audio.currentTime / audio.duration) + "%"; });
+
+  $("play").addEventListener("click", startPlayback);
+  $("pause").addEventListener("click", () => { if (audio.paused) { if (audio.ended) audio.currentTime = 0; audio.play().catch(() => {}); } else audio.pause(); });
+  $("again").addEventListener("click", () => { audio.currentTime = 0; audio.play().catch(() => {}); });
+  $("reveal").addEventListener("click", reveal);
+  $("next").addEventListener("click", randomSong);
+  $("random").addEventListener("click", randomSong);
+  $("numform").addEventListener("submit", e => {
+    e.preventDefault();
+    const s = songs.find(x => x.id === parseInt($("num").value, 10));
+    if (s) load(s, false); else status("Det finns inget kort med det numret.");
+  });
+
+  const k = parseInt(new URLSearchParams(location.search).get("k"), 10);
+  const fromCard = songs.find(s => s.id === k);
+  if (fromCard) load(fromCard, false); else { startScreen(); if (!isNaN(k)) status("Det finns inget kort med nummer " + k + "."); }
+})();
+</script>
+</body>
+</html>
