@@ -13,6 +13,8 @@ Spelet finns på <https://sludde05-coder.github.io/musikquiz/>.
 | `kort.html` | Utskrivbara kort: QR-kod på framsidan, år, artist och titel på baksidan |
 | `regler.html` | Regler och brickor att skriva ut |
 | `songs.js` | Låtlistan |
+| `manifest.webmanifest`, `icons/` | Gör sidan installerbar som app på hemskärmen |
+| `vendor/jsQR.js` | Läser QR-koder från kameran i appen |
 | `player.js` | Bygger Spotify-länkarna för smakprov och hel låt |
 | `config.js` | Adressen som QR-koderna pekar på |
 
@@ -39,4 +41,8 @@ Alla låtar spelas via Spotify. `sp` är Spotify-låtens ID (det som står efter
 
 QR-koderna pekar på adressen i `config.js`. Byter du användarnamn eller reponamn måste du ändra adressen där och skriva ut korten igen.
 
-QR-koderna skapas med [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT-licens).
+## Appen
+
+Öppna sajten i mobilen och lägg till den på hemskärmen (Safari: Dela → Lägg till på hemskärmen, Chrome: menyn → Installera app). Appen öppnas direkt på spelsidan, där knappen **Skanna ett kort** startar kameran.
+
+QR-koderna skapas med [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT-licens) och läses med [jsQR](https://github.com/cozmo/jsQR) (Apache 2.0).
