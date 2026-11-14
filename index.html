@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#15131f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Musikquiz">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Musikquiz</title>
 <style>
   :root { --bg: #15131f; --card: #221f33; --ink: #f4f1ff; --dim: #a7a1c2; --gold: #ffd23f; --pink: #ff5d8f; }
@@ -33,20 +40,32 @@
   <div class="logo"><div class="disc"></div><h1>Musikquiz</h1></div>
   <p class="lead">Hör en låt, gissa när den kom och bygg din tidslinje. Först till tio kort vinner.</p>
 
-  <a class="btn primary" href="spela.html"><strong>▶ Spela</strong><span>Skanna ett kort eller slumpa en låt</span></a>
+  <a class="btn primary" href="spela.html"><strong>▶ Spela</strong><span>Skanna ett kort med kameran eller slumpa en låt</span></a>
   <a class="btn" href="kort.html"><strong>🖨 Skriv ut korten</strong><span id="cards">Kort med QR-kod, år, artist och titel</span></a>
   <a class="btn" href="regler.html"><strong>📖 Regler och brickor</strong><span>Alla regler, fyra svårighetsnivåer och brickor att klippa ut</span></a>
 
   <h2>Så funkar det</h2>
   <ol>
-    <li>Skanna QR-koden på ett kort med mobilens kamera och tryck på Spela låten.</li>
+    <li>Tryck på Spela, skanna QR-koden på ett kort och tryck på Spela låten.</li>
     <li>Lägg kortet där du tror att låten hör hemma i din tidslinje.</li>
     <li>Vänd kortet. Rätt plats? Då är kortet ditt.</li>
   </ol>
 
+  <div id="install">
+    <h2>Installera som app</h2>
+    <ol>
+      <li><strong>iPhone:</strong> öppna sidan i Safari, tryck på Dela-knappen och välj <em>Lägg till på hemskärmen</em>.</li>
+      <li><strong>Android:</strong> öppna sidan i Chrome, tryck på menyn (⋮) och välj <em>Installera app</em> eller <em>Lägg till på startskärmen</em>.</li>
+    </ol>
+  </div>
+
   <footer>Alla låtar spelas via Spotify: först ett 30 sekunder långt smakprov utan titel, och hela låten med ett tryck.</footer>
 </main>
+<script>
+  // Dölj installationsrutan när sidan redan körs som app.
+  if (matchMedia("(display-mode: standalone)").matches || navigator.standalone) document.getElementById("install").hidden = true;
+</script>
 <script src="songs.js"></script>
-<script>document.getElementById("cards").textContent = window.SONGS.length + " kort med QR-kod, år, artist och titel";</script>
+<script>document.getElementById("cards").textContent = window.SONGS.length + " kort i två kortlekar, med QR-kod, år, artist och titel";</script>
 </body>
 </html>

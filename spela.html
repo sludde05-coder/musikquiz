@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#15131f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Musikquiz">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Musikquiz</title>
 <style>
   :root { --bg: #15131f; --card: #221f33; --ink: #f4f1ff; --dim: #a7a1c2; --gold: #ffd23f; --pink: #ff5d8f; }
@@ -40,7 +47,13 @@
   form { display: flex; gap: 10px; width: 100%; }
   input { font: inherit; font-size: 18px; flex: 1; min-width: 0; padding: 14px; border-radius: 14px; border: 2px solid #ffffff2e; background: transparent; color: var(--ink); }
   form button { width: auto; }
+  select { font: inherit; font-size: 16px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 2px solid #ffffff2e; background: var(--bg); color: var(--ink); }
   .hint { font-size: 14px; color: var(--dim); margin: 0; }
+  #scanner { position: fixed; inset: 0; z-index: 10; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #scanner video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #scanner .frame { position: relative; width: min(70vw, 300px); aspect-ratio: 1; border: 4px solid var(--gold); border-radius: 22px; box-shadow: 0 0 0 100vmax #0009; }
+  #scanner p { position: relative; margin: 22px 20px 0; font-size: 17px; font-weight: 600; text-align: center; text-shadow: 0 1px 4px #000; }
+  #scanner button { position: absolute; left: 20px; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom)); width: auto; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -54,8 +67,14 @@
 
   <!-- Startläge: inget kort valt -->
   <div id="start" hidden style="width:100%;display:flex;flex-direction:column;gap:14px">
-    <p class="hint">Skanna QR-koden på ett kort med mobilens kamera, eller välj här:</p>
-    <button class="primary" id="random">🎲 Slumpa en låt</button>
+    <button class="primary" id="scan">📷 Skanna ett kort</button>
+    <p class="hint">Eller spela utan kort:</p>
+    <button id="random">🎲 Slumpa en låt</button>
+    <select id="deck" aria-label="Kortlek">
+      <option value="alla">Alla låtar</option>
+      <option value="1">Kortlek 1 – dina låtar</option>
+      <option value="2">Kortlek 2 – blandade hits</option>
+    </select>
     <form id="numform"><input id="num" inputmode="numeric" pattern="[0-9]*" placeholder="Kortnummer" aria-label="Kortnummer"><button>Öppna</button></form>
   </div>
 
@@ -74,9 +93,17 @@
     </div>
     <a class="btn spotify" id="spotifyOpen" target="_blank" rel="noopener">Spela hela låten i Spotify ↗<small>Spotify visar titeln, så låt DJ:n hålla i mobilen</small></a>
     <button id="next" hidden>🎲 Nästa låt</button>
-    <p class="hint" id="nextHint" hidden>Skanna nästa kort med kameran när ni är klara.</p>
+    <button class="primary" id="scanNext" hidden>📷 Skanna nästa kort</button>
   </div>
 </main>
+
+<!-- Kameran som skannar kortens QR-koder -->
+<div id="scanner" hidden>
+  <video id="scanVideo" playsinline muted autoplay></video>
+  <div class="frame"></div>
+  <p id="scanMsg"></p>
+  <button id="scanCancel">Avbryt</button>
+</div>
 
 <audio id="audio" preload="auto" playsinline></audio>
 
@@ -115,7 +142,7 @@
     song = s; randomMode = isRandom; ready = false; revealArmed = false;
     audio.pause(); audio.removeAttribute("src");
     $("start").hidden = true; show("game", true); show("bar", false); show("controls", false); show("answer", false);
-    $("spotifyOpen").href = P.spotifyLink(song); show("next", false); show("nextHint", false); show("play", true); show("reveal", true);
+    $("spotifyOpen").href = P.spotifyLink(song); show("next", false); show("scanNext", false); show("play", true); show("reveal", true);
     $("play").disabled = false; $("play").textContent = "▶ Spela låten"; $("reveal").textContent = "Visa svaret";
     $("cardno").textContent = isRandom ? "Slumpad låt" : "Kort " + s.id;
     $("fill").style.width = "0"; $("disc").classList.remove("spin");
@@ -156,17 +183,85 @@
     }
     $("ansYear").textContent = song.year; $("ansArtist").textContent = song.artist; $("ansTitle").textContent = song.title;
     show("answer", true); show("reveal", false);
-    show("next", randomMode); show("nextHint", !randomMode);
+    show("next", randomMode); show("scanNext", !randomMode);
   }
 
   function randomSong() {
     let played = store.get();
-    let left = songs.filter(s => !played.includes(s.id));
-    if (!left.length) { played = []; left = songs.slice(); }
+    const d = $("deck").value, pool = d === "alla" ? songs : songs.filter(s => String(s.deck || 1) === d);
+    let left = pool.filter(s => !played.includes(s.id));
+    if (!left.length) { played = played.filter(id => !pool.some(s => s.id === id)); left = pool.slice(); }
     const s = left[Math.floor(Math.random() * left.length)];
     played.push(s.id); store.set(played);
     load(s, true);
   }
+
+  // ---- Skanner: läser kortets QR-kod med kameran, direkt i appen ----
+  let stream = null, scanTimer = null, jsQRLoading = null;
+  const scanCanvas = document.createElement("canvas");
+
+  function loadJsQR() {
+    if (window.jsQR) return Promise.resolve();
+    return jsQRLoading || (jsQRLoading = new Promise((resolve, reject) => {
+      const s = document.createElement("script"); s.src = "vendor/jsQR.js";
+      s.onload = resolve; s.onerror = () => { jsQRLoading = null; reject(new Error("load")); };
+      document.head.appendChild(s);
+    }));
+  }
+
+  // QR-koden innehåller en adress som slutar med spela.html?k=<kortnummer>.
+  function cardIdFrom(text) {
+    const t = String(text).trim();
+    if (/^\d{1,4}$/.test(t)) return parseInt(t, 10);
+    try { const u = new URL(t); if (/\/spela\.html$/.test(u.pathname)) return parseInt(u.searchParams.get("k"), 10); } catch (e) {}
+    return NaN;
+  }
+
+  function closeScanner() {
+    clearInterval(scanTimer); scanTimer = null;
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    $("scanVideo").srcObject = null; show("scanner", false);
+  }
+
+  function scanFrame() {
+    const v = $("scanVideo");
+    if (!v.videoWidth || !window.jsQR) return;
+    const scale = Math.min(1, 640 / Math.max(v.videoWidth, v.videoHeight));
+    const w = scanCanvas.width = Math.round(v.videoWidth * scale), h = scanCanvas.height = Math.round(v.videoHeight * scale);
+    const ctx = scanCanvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(v, 0, 0, w, h);
+    const hit = window.jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: "dontInvert" });
+    if (!hit || !hit.data) return;
+    const found = songs.find(s => s.id === cardIdFrom(hit.data));
+    if (found) { closeScanner(); load(found, false); }
+    else $("scanMsg").textContent = "Det där är inget Musikquiz-kort. Prova ett annat.";
+  }
+
+  async function openScanner() {
+    audio.pause(); show("scanner", true); $("scanMsg").textContent = "Startar kameran …";
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("nocamera");
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+      await loadJsQR();
+      if ($("scanner").hidden) { closeScanner(); return; }   // avbröts medan kameran startade
+      const v = $("scanVideo"); v.srcObject = stream; await v.play();
+      $("scanMsg").textContent = "Håll kortets QR-kod i rutan";
+      scanTimer = setInterval(scanFrame, 150);
+    } catch (e) {
+      closeScanner();
+      status(e && e.name === "NotAllowedError"
+        ? "Kameran är blockerad. Tillåt kameran för sidan, eller skriv kortnumret."
+        : "Kameran gick inte att starta. Skriv kortnumret i stället.");
+      if (song) startScreen2();
+    }
+  }
+  // Visa startskärmen (med fältet för kortnummer) utan att skriva över felmeddelandet.
+  function startScreen2() { const msg = $("status").textContent; startScreen(); status(msg); }
+
+  $("scan").addEventListener("click", openScanner);
+  $("scanNext").addEventListener("click", openScanner);
+  $("scanCancel").addEventListener("click", closeScanner);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) closeScanner(); });
 
   audio.addEventListener("playing", () => { if (ready) { $("disc").classList.add("spin"); status("Lyssna … vilket år?"); $("pause").textContent = "⏸ Paus"; } });
   audio.addEventListener("pause", () => { $("disc").classList.remove("spin"); if (ready && !audio.ended) $("pause").textContent = "▶ Fortsätt"; });

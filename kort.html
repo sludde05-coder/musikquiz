@@ -12,6 +12,8 @@
   .toolbar a { color: #fff; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; margin-right: 6px; }
   .toolbar button { font: inherit; padding: 9px 16px; border: 0; border-radius: 10px; background: #ffd23f; color: #15131f; font-weight: 700; cursor: pointer; }
   .toolbar label, .toolbar span { font-size: 14px; }
+  .toolbar select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 0; }
+  .card.front.deck2 .brand { color: #ff5d8f; }
   .help { max-width: 190mm; margin: 16px auto; padding: 14px 18px; background: #fff; border-radius: 10px; font-size: 15px; line-height: 1.5; }
   .help ol { margin: 6px 0 0; padding-left: 22px; }
   .scroll { overflow-x: auto; padding: 0 8px; }
@@ -45,6 +47,13 @@
 <div class="toolbar">
   <a href="./">Musikquiz</a>
   <button onclick="window.print()">Skriv ut korten</button>
+  <label>Kortlek
+    <select id="deck">
+      <option value="1">1 – dina låtar</option>
+      <option value="2">2 – blandade hits</option>
+      <option value="alla">Båda</option>
+    </select>
+  </label>
   <label><input type="checkbox" id="cutlines" checked> Klipplinjer</label>
   <span id="count"></span>
 </div>
@@ -74,10 +83,20 @@
 
   // Blanda korten så att arken inte ligger i årsordning. Samma ordning varje gång,
   // så att ett enstaka ark kan skrivas ut på nytt.
-  const songs = [...window.SONGS];
-  let seed = 20261113;
-  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
-  for (let i = songs.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [songs[i], songs[j]] = [songs[j], songs[i]]; }
+  // Varje kortlek blandas för sig, så att ordningen blir densamma oavsett om du skriver ut en eller båda.
+  function shuffled(list) {
+    const a = [...list]; let seed = 20261113;
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  const deckOf = s => s.deck || 1;
+  const wanted = new URLSearchParams(location.search).get("lek") || "1";
+  const deckSelect = document.getElementById("deck");
+  deckSelect.value = ["1", "2", "alla"].includes(wanted) ? wanted : "1";
+  deckSelect.addEventListener("change", () => { location.search = "?lek=" + deckSelect.value; });
+  const decks = deckSelect.value === "alla" ? [1, 2] : [Number(deckSelect.value)];
+  const songs = decks.flatMap(d => shuffled(window.SONGS.filter(s => deckOf(s) === d)));
 
   const root = document.getElementById("sheets");
   document.getElementById("count").textContent = songs.length + " kort · " + Math.ceil(songs.length / PER_PAGE) + " ark";
@@ -86,7 +105,7 @@
     while (page.length < PER_PAGE) page.push(null);
     let front = "", back = "";
     page.forEach(s => {
-      front += s ? `<div class="card front"><div class="qr">${qrSvg(urlFor(s))}</div><div class="brand">Musikquiz</div><div class="no">${s.id}</div></div>`
+      front += s ? `<div class="card front${deckOf(s) === 2 ? " deck2" : ""}"><div class="qr">${qrSvg(urlFor(s))}</div><div class="brand">${deckOf(s) === 2 ? "Musikquiz · Mix" : "Musikquiz"}</div><div class="no">${s.id}</div></div>`
                  : `<div class="card empty"></div>`;
     });
     // Baksidan: varje rad spegelvänds så att korten matchar när arket vänds längs långa kanten.
