@@ -22,6 +22,13 @@ Spelet finns på <https://sludde05-coder.github.io/musikquiz/>.
 2. Öppna `regler.html` och skriv ut regler och brickor enkelsidigt.
 3. Klipp ut korten och brickorna.
 
+## Kortlekar
+
+- **Kortlek 1 – dina låtar** (kort 1–124): vald efter lyssningen på Spotify.
+- **Kortlek 2 – blandade hits** (kort 125–248): allmänt kända hits från 1956 till 2024, jämnt spridda över årtiondena. Framsidan är märkt "Musikquiz · Mix" i rosa.
+
+Välj kortlek i menyn på `kort.html`. Kortlekarna kan blandas ihop eller spelas var för sig.
+
 ## Ändra låtarna
 
 Låtarna ligger i `songs.js`. Varje låt har ett fast nummer (`id`) som står i QR-koden, så lägg nya låtar sist med nya nummer och ändra inte numret på en låt som redan är utskriven.
