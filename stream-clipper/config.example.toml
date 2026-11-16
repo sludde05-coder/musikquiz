@@ -1,0 +1,42 @@
+# Copy to config.toml and fill in the keys. Any key can also be set as an
+# environment variable instead, e.g. TWITCH_CLIENT_ID, YOUTUBE_API_KEY.
+
+[discovery]
+game = "Grand Theft Auto VI"                      # Twitch/Kick category name
+search_terms = ["GTA 6", "GTA VI", "Grand Theft Auto VI"]  # YouTube search
+top_n = 10                                       # how many streams to track
+min_viewers = 500
+platforms = ["twitch", "youtube", "kick"]
+refresh_seconds = 300                            # re-rank every 5 min
+youtube_refresh_seconds = 900                    # YouTube quota: keep >= 900
+always_track = []                                # e.g. ["twitch:kaicenat", "kick:adinross"]
+
+[detector]
+short_window = 5        # seconds that count as "right now"
+baseline_window = 300   # seconds that count as "normal"
+multiplier = 3.0        # chat must be 3x normal...
+min_zscore = 4.0        # ...and clearly outside normal variation...
+min_rate = 2.0          # ...and at least 2 msgs/sec
+warmup = 60             # learn a channel's normal for 60 s before clipping
+cooldown = 90           # at most one clip per channel per 90 s
+
+[clips]
+output_dir = "clips"
+buffer_dir = "buffer"
+pre_roll = 30           # seconds kept before the explosion
+post_roll = 20          # seconds kept after it
+chat_delay = 0          # raise if clips start too late (stream delay)
+segment_seconds = 2
+quality = "best"        # or "720p", "480p" to save disk/bandwidth
+
+[twitch]   # https://dev.twitch.tv/console/apps  → Register, "Confidential"
+client_id = ""
+client_secret = ""
+
+[youtube]  # Google Cloud console → enable "YouTube Data API v3" → API key
+api_key = ""
+
+[kick]     # https://kick.com/settings/developer → create app
+client_id = ""
+client_secret = ""
+category_id = 0         # set if Kick names the GTA 6 category differently

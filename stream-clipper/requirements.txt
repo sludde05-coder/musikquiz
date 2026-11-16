@@ -1,0 +1,4 @@
+aiohttp>=3.9
+streamlink>=6.8
+chat-downloader>=0.2.8
+pytest>=8
