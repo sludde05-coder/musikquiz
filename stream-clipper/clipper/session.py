@@ -17,6 +17,7 @@ from .config import Config
 from .detector import Spike, SpikeDetector
 from .models import ChatMessage, Stream
 from .recorder import Recorder
+from .vertical import render_vertical
 
 log = logging.getLogger(__name__)
 
@@ -82,10 +83,13 @@ class ChannelSession:
         await asyncio.sleep(max(0.0, end - time.time()) + c.segment_seconds * 2 + 1)
         stamp = datetime.fromtimestamp(spike.onset).strftime("%Y%m%d-%H%M%S")
         out = Path(c.output_dir) / f"{_safe(self.stream.key)}_{stamp}.mp4"
-        if not await self.recorder.save_clip(start, end, out):
+        actual_start = await self.recorder.save_clip(start, end, out)
+        if actual_start is None:
             return
         self.clips_saved += 1
         window = [m for m in self.recent if spike.onset - 5 <= m.ts <= spike.detected_at + 10]
+        timeline = [[round(m.ts - actual_start, 1), m.user, m.text]
+                    for m in self.recent if actual_start <= m.ts <= end]
         meta = {
             "platform": self.stream.platform, "channel": self.stream.channel,
             "name": self.stream.display_name or self.stream.channel, "url": self.stream.url,
@@ -95,9 +99,14 @@ class ChannelSession:
             "clip_end": datetime.fromtimestamp(end).isoformat(timespec="seconds"),
             "chat_rate": round(spike.rate, 2), "normal_rate": round(spike.baseline, 2),
             "ratio": round(spike.ratio, 2) if spike.baseline else None, "zscore": round(spike.zscore, 1),
+            "explosion_offset": round(spike.onset - actual_start, 1),
             "chat_sample": [f"{m.user}: {m.text}" for m in window[:40]],
+            "chat_timeline": timeline[-400:],
         }
         out.with_suffix(".json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
         with open(Path(c.output_dir) / "index.jsonl", "a") as f:
-            f.write(json.dumps({k: v for k, v in meta.items() if k != "chat_sample"}, ensure_ascii=False) + "\n")
+            f.write(json.dumps({k: v for k, v in meta.items() if k not in ("chat_sample", "chat_timeline")},
+                               ensure_ascii=False) + "\n")
         log.info("🎬 saved %s", out)
+        if self.cfg.vertical.enabled:
+            await render_vertical(out, self.cfg.vertical)

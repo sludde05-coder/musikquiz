@@ -96,12 +96,14 @@ class Recorder:
             if ts < cutoff:
                 p.unlink(missing_ok=True)
 
-    async def save_clip(self, start: float, end: float, out: Path) -> bool:
+    async def save_clip(self, start: float, end: float, out: Path) -> float | None:
+        """Write the clip; returns the wall-clock time its first frame was recorded, or None."""
         segs = self.segments()[:-1]  # newest one is still being written
-        chosen = [p for ts, p in segs if ts + self.segment_seconds > start and ts < end]
-        if not chosen:
+        picked = [(ts, p) for ts, p in segs if ts + self.segment_seconds > start and ts < end]
+        if not picked:
             log.error("%s no buffered video for %s..%s", self.name, start, end)
-            return False
+            return None
+        chosen = [p for _, p in picked]
         out.parent.mkdir(parents=True, exist_ok=True)
         # Copy first so pruning can't delete a segment mid-concat.
         tmp = out.with_suffix(".parts")
@@ -125,5 +127,5 @@ class Recorder:
         shutil.rmtree(tmp, ignore_errors=True)
         if proc.returncode != 0:
             log.error("%s ffmpeg concat failed: %s", self.name, err.decode(errors="replace")[-500:])
-            return False
-        return True
+            return None
+        return picked[0][0]

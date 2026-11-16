@@ -12,7 +12,12 @@ the rankings change.
 13:02:11 INFO    top 10 for 'Grand Theft Auto VI': twitch:kaicenat(212,904), kick:adinross(98,311), ...
 13:14:37 INFO    🔥 twitch:kaicenat chat exploded: 412.6 msg/s vs 61.2 normal (x6.7, z=18.3)
 13:14:58 INFO    🎬 saved clips/twitch_kaicenat_20261119-131434.mp4
+13:15:21 INFO    ✍️  twitch_kaicenat_20261119-131434.mp4: "Kai jumped the bridge in a cop car" (hype, claude, 74 words, 2 beats)
+13:15:49 INFO    📱 saved clips/twitch_kaicenat_20261119-131434_vertical.mp4
 ```
+
+Every clip is saved twice: the original 16:9 video, plus a **1080×1920 phone version with
+captions** ready for TikTok, YouTube Shorts and Instagram Reels.
 
 ## How it works
 
@@ -28,6 +33,43 @@ the rankings change.
 5. **Clip.** It finds where the surge began, waits 20 seconds for the aftermath, then joins the
    pieces from 30 s before the surge to 20 s after into one `.mp4` (no re-encoding, so it's fast).
    A `.json` file next to it holds the stats and a sample of what chat was saying.
+6. **Phone version.** The clip is turned into a captioned vertical video (see below).
+
+## Phone clips and captions
+
+The captions adapt to what happens in each clip:
+
+| Layer | Where | What decides it |
+| --- | --- | --- |
+| **Hook** | Top of the screen, whole clip | Claude looks at frames from the clip, what the streamer says and how chat reacted, and writes a headline about what actually happened ("Kai jumped the bridge in a cop car") |
+| **Speech captions** | Middle | What the streamer says, transcribed locally with Whisper, 1–3 words at a time. The word being spoken pops in the accent color; key words Claude picked stay highlighted |
+| **Reaction captions** | Timed to key moments | Claude places 0–3 short captions ("HE ACTUALLY MADE IT") at the moments that set chat off |
+| **Color** | All captions | The mood of the moment: yellow = funny, green = hype, red = shock, orange = rage, blue = sad, pink = wholesome |
+| **Crop position** | `crop` layout | Claude says where the action is in the frame, so the vertical slice keeps it in view |
+
+Claude also writes a ready-to-post caption with hashtags; it's in the clip's `.json` under
+`captions.post_caption`.
+
+**Without an Anthropic API key** it still works. It reads chat instead: KEKW/LMAO means funny,
+W/POG means hype, WTF/??? means shock, and so on. That picks the color and a template hook
+("KaiCenat had chat CRYING"), and the most-spammed chat message becomes a reaction caption
+("CHAT: KEKW"). **Without Whisper** you get no word-by-word captions, but everything else works.
+
+Two layouts (`[vertical] layout` in config):
+
+- `blur` (default): the whole 16:9 frame in the middle over a blurred, zoomed copy. Nothing is cut off,
+  which suits GTA, since the HUD and minimap stay visible.
+- `crop`: fills the screen with a vertical slice of the frame, positioned on the action.
+
+Re-render any clip (e.g. after changing the layout):
+
+```bash
+python -m clipper render clips/twitch_kaicenat_20261119-131434.mp4 --layout crop
+python -m clipper render clips/*.mp4 --no-ai
+```
+
+Rendering is CPU-heavy (about 20–40 s per clip), so clips render one at a time (`max_parallel`).
+Recording is never held up by rendering.
 
 ## Setup
 
@@ -49,6 +91,15 @@ API keys are only used to find the top streams. Each one is free:
 | Kick | [kick.com/settings/developer](https://kick.com/settings/developer) | Create an app, copy the client ID and secret |
 
 A platform without keys is skipped. You can also list channels by hand in `always_track`.
+
+For AI captions, also set an Anthropic API key (from [console.anthropic.com](https://console.anthropic.com)):
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...     # Windows: set ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Each clip uses one Claude request (a few frames + transcript + chat), a few cents per clip. The first
+render downloads the Whisper speech model (~500 MB for `small`).
 
 ## Usage
 
@@ -106,4 +157,4 @@ python -m pytest
 ```
 
 Includes an end-to-end test that streams an ffmpeg test pattern, fakes a chat explosion, and checks
-that the saved clip has the right length and lead-in.
+that the saved clip has the right length and lead-in, and that a 1080×1920 captioned version was made.

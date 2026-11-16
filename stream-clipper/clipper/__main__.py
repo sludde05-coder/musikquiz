@@ -3,6 +3,7 @@ python -m clipper run                      # auto-track the top 10 GTA 6 streams
 python -m clipper discover                 # just print the current top 10
 python -m clipper watch twitch:xqc kick:adinross youtube:VIDEO_ID
 python -m clipper simulate                 # see the spike detector on fake chat
+python -m clipper render clips/foo.mp4     # (re)make the captioned phone version of a clip
 """
 from __future__ import annotations
 
@@ -28,6 +29,10 @@ def main() -> None:
     w = sub.add_parser("watch", help="track specific channels")
     w.add_argument("targets", nargs="+", help="twitch:login, kick:slug, youtube:VIDEO_ID or URLs")
     sub.add_parser("simulate", help="run the detector on synthetic chat")
+    rn = sub.add_parser("render", help="make captioned 9:16 versions of saved clips")
+    rn.add_argument("clips", nargs="+")
+    rn.add_argument("--layout", choices=["blur", "crop"])
+    rn.add_argument("--no-ai", action="store_true", help="rule-based captions only")
     a = ap.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if a.verbose else logging.INFO,
@@ -50,6 +55,17 @@ def main() -> None:
             asyncio.run(_discover(cfg))
         elif a.cmd == "simulate":
             _simulate(cfg)
+        elif a.cmd == "render":
+            from pathlib import Path
+            from .vertical import render_vertical
+            if a.layout:
+                cfg.vertical.layout = a.layout
+            if a.no_ai:
+                cfg.vertical.ai_captions = False
+            async def _render():
+                for c in a.clips:
+                    await render_vertical(Path(c), cfg.vertical)
+            asyncio.run(_render())
     except KeyboardInterrupt:
         pass
 

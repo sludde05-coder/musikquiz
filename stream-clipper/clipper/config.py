@@ -32,6 +32,20 @@ class ClipConfig:
 
 
 @dataclass
+class VerticalConfig:
+    enabled: bool = True           # also render a 9:16 captioned version of each clip
+    layout: str = "blur"           # "blur" (full frame over blurred fill) or "crop"
+    speech_captions: bool = True   # word-by-word captions from Whisper
+    whisper_model: str = "small"   # tiny / base / small / medium / large-v3
+    ai_captions: bool = True       # let Claude write the hook and reaction captions
+    ai_model: str = "claude-opus-5-5"
+    font: str = "Arial"
+    crf: int = 21                  # quality: lower = better and bigger
+    preset: str = "veryfast"
+    max_parallel: int = 1          # renders at once (CPU heavy)
+
+
+@dataclass
 class Credentials:
     twitch_client_id: str = ""
     twitch_client_secret: str = ""
@@ -48,6 +62,7 @@ class Config:
     discovery: DiscoveryConfig = field(default_factory=DiscoveryConfig)
     detector: DetectorConfig = field(default_factory=DetectorConfig)
     clips: ClipConfig = field(default_factory=ClipConfig)
+    vertical: VerticalConfig = field(default_factory=VerticalConfig)
     creds: Credentials = field(default_factory=Credentials)
 
 
@@ -66,6 +81,7 @@ def load_config(path: str | None) -> Config:
         _fill(cfg.discovery, data.get("discovery", {}))
         _fill(cfg.detector, data.get("detector", {}))
         _fill(cfg.clips, data.get("clips", {}))
+        _fill(cfg.vertical, data.get("vertical", {}))
         for platform in ("twitch", "youtube", "kick"):
             _fill(cfg.creds, data.get(platform, {}), prefix=platform + "_")
     # Environment variables win, so secrets can stay out of the file.

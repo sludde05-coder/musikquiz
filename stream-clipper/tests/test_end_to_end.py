@@ -42,13 +42,15 @@ def test_clip_saved_with_preroll(tmp_path):
     cfg.clips.output_dir = str(tmp_path / "clips")
     cfg.clips.buffer_dir = str(tmp_path / "buf")
     cfg.clips.pre_roll, cfg.clips.post_roll, cfg.clips.segment_seconds = 8, 4, 1
+    cfg.vertical.ai_captions = False       # no network in tests: chat-based captions
+    cfg.vertical.speech_captions = False
 
     async def go():
         async with aiohttp.ClientSession() as http:
             st = Stream("twitch", "fake", "fake://", display_name="Fake")
             sess = ChannelSession(st, cfg, http, source_cmd=FAKE_STREAM, chat=fake_chat(time.time() + 18))
             sess.start()
-            deadline = time.time() + 60
+            deadline = time.time() + 90
             while sess.clips_saved == 0 and time.time() < deadline:
                 await asyncio.sleep(1)
             await sess.stop()
@@ -56,10 +58,17 @@ def test_clip_saved_with_preroll(tmp_path):
 
     sess = asyncio.run(go())
     assert sess.clips_saved == 1
-    clips = list((tmp_path / "clips").glob("*.mp4"))
+    clips = [c for c in (tmp_path / "clips").glob("*.mp4") if not c.stem.endswith("_vertical")]
     assert len(clips) == 1
     # pre_roll 8 + burst detection (~1-3 s) + post_roll 4, at 1 s segment granularity
     assert 11 <= duration(clips[0]) <= 18, duration(clips[0])
     meta = json.loads(clips[0].with_suffix(".json").read_text())
     assert meta["chat_rate"] > meta["normal_rate"] * 3
     assert any("OMEGALUL" in line for line in meta["chat_sample"])
+    assert 6 <= meta["explosion_offset"] <= 11
+    # Phone version: 9:16, captions picked "funny" from the OMEGALUL spam.
+    vert = clips[0].with_name(clips[0].stem + "_vertical.mp4")
+    size = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-show_entries",
+                           "stream=width,height", "-of", "csv=p=0", str(vert)], capture_output=True, text=True)
+    assert size.stdout.strip() == "1080,1920"
+    assert meta["vertical"] == vert.name and meta["captions"]["mood"] == "funny"

@@ -40,3 +40,14 @@ api_key = ""
 client_id = ""
 client_secret = ""
 category_id = 0         # set if Kick names the GTA 6 category differently
+
+[vertical]              # phone version (9:16) with captions, made for every clip
+enabled = true
+layout = "blur"         # "blur": whole frame over a blurred background; "crop": fill the screen
+speech_captions = true  # word-by-word captions of what the streamer says (local Whisper)
+whisper_model = "small" # "base" is faster, "medium" more accurate
+ai_captions = true      # Claude watches the clip and writes the hook + reaction captions
+                        # (needs ANTHROPIC_API_KEY; falls back to chat-based captions without it)
+font = "Arial"
+crf = 21
+max_parallel = 1
