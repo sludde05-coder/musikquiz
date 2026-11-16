@@ -1,1 +1,0 @@
-"""Chat-driven livestream clipper."""
